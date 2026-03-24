@@ -49,7 +49,7 @@ body {
   border: 1px solid var(--border);
 }
 
-/* Header identico ao enviado */
+/* Header identico ao index (1).html */
 header {
   padding: 1.5rem 2rem;
   display: flex;
@@ -58,11 +58,10 @@ header {
   border-bottom: 1px solid var(--border);
   background: var(--surface);
 }
-
 .logos { display: flex; align-items: center; gap: 1.5rem; }
 .logos img { height: 48px; width: auto; object-fit: contain; }
 
-.content { padding: 2rem; }
+.content { padding: 2.5rem 2rem; }
 
 h1 { 
   font-weight: 800; 
@@ -71,10 +70,9 @@ h1 {
   margin-bottom: 0.5rem; 
   letter-spacing: -0.025em; 
 }
-
 .subtitle { color: var(--text-light); font-size: 0.95rem; margin-bottom: 2rem; }
 
-/* Dropzone com estilo do surface2 do seu arquivo */
+/* Área de Upload */
 .upload-box {
   border: 2px dashed var(--arsal-blue-light);
   background: var(--surface2);
@@ -85,7 +83,6 @@ h1 {
   transition: all 0.2s ease;
   margin-bottom: 2rem;
 }
-
 .upload-box:hover { background: #EDF2F7; border-color: var(--arsal-blue); }
 .upload-box p { font-weight: 700; color: var(--arsal-blue); margin-bottom: 4px; }
 .upload-box span { font-size: 0.85rem; color: var(--text-light); }
@@ -108,7 +105,6 @@ h1 {
   transition: all 0.2s ease;
   box-shadow: 0 2px 4px rgba(0,0,0,0.02);
 }
-
 .file-item:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
 
 .preview-img {
@@ -151,7 +147,7 @@ h1 {
   z-index: 10;
 }
 
-/* Botão principal identico ao seu padrão */
+/* Botão Principal Estilo Gefsan */
 .btn-primary {
   background: var(--arsal-blue);
   color: white;
@@ -159,20 +155,20 @@ h1 {
   padding: 1.25rem;
   width: 100%;
   border-radius: 8px;
-  font-weight: 700;
-  font-size: 1rem;
+  font-weight: 800;
+  font-size: 0.95rem;
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: all 0.2s ease;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
+  box-shadow: 0 4px 0px #002a57;
 }
-
-.btn-primary:hover { background: var(--arsal-blue-mid); }
-.btn-primary:disabled { background: #CBD5E0; cursor: not-allowed; opacity: 0.7; }
+.btn-primary:active { transform: translateY(2px); box-shadow: 0 2px 0px #002a57; }
+.btn-primary:disabled { background: #CBD5E0; cursor: not-allowed; opacity: 0.7; box-shadow: none; transform: none; }
 
 .footer-text {
   margin-top: 2rem;
@@ -183,7 +179,7 @@ h1 {
   padding-top: 1.5rem;
 }
 
-.sortable-ghost { opacity: 0.4; background: var(--surface2); }
+.sortable-ghost { opacity: 0.2; background: var(--arsal-blue-light); }
 </style>
 </head>
 <body>
@@ -197,12 +193,12 @@ h1 {
   </header>
 
   <div class="content">
-    <h1>Mesclagem de PDFs</h1>
-    <p class="subtitle">Organize a ordem dos documentos arrastando os cards abaixo.</p>
+    <h1>Unir Documentos PDF</h1>
+    <p class="subtitle">Selecione os arquivos, organize a ordem e gere o relatório final.</p>
 
     <div class="upload-box" id="drop-zone" onclick="document.getElementById('file-input').click()">
       <p>+ Adicionar Arquivos PDF</p>
-      <span>Clique aqui ou arraste os documentos</span>
+      <span>Clique aqui ou arraste os documentos para esta área</span>
     </div>
     <input type="file" id="file-input" multiple accept="application/pdf" style="display:none" onchange="handleFiles(this.files)">
 
@@ -214,20 +210,21 @@ h1 {
     </button>
 
     <div class="footer-text">
-      Gerência de Fiscalização Operacional de Saneamento (Gefsan) · Processamento Local
+      Gerência de Fiscalização Operacional de Saneamento (Gefsan) · Ferramenta de Apoio
     </div>
   </div>
 </div>
 
 <script>
-// Configuração do motor de renderização de PDF
+// Configuração do motor de PDF
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
 let pdfList = [];
 const grid = document.getElementById('sortable-grid');
 const mergeBtn = document.getElementById('merge-btn');
+const fileInput = document.getElementById('file-input');
 
-// Ativa o arraste (Drag & Drop de reordenação)
+// Inicializa ordenação por arraste
 new Sortable(grid, {
   animation: 250,
   ghostClass: 'sortable-ghost',
@@ -244,28 +241,29 @@ new Sortable(grid, {
 async function handleFiles(files) {
   for (let file of files) {
     if (file.type !== 'application/pdf') continue;
-
     const id = Date.now() + Math.random();
     const thumb = await createThumbnail(file);
-    
     pdfList.push({ id, file, thumb });
   }
   refreshUI();
+  fileInput.value = ""; // Limpa o input para permitir selecionar o mesmo arquivo se necessário
 }
 
 async function createThumbnail(file) {
-  const data = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data }).promise;
-  const page = await pdf.getPage(1);
-  const viewport = page.getViewport({ scale: 0.4 });
-  
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  canvas.height = viewport.height;
-  canvas.width = viewport.width;
-
-  await page.render({ canvasContext: ctx, viewport }).promise;
-  return canvas.toDataURL();
+  try {
+    const data = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data }).promise;
+    const page = await pdf.getPage(1);
+    const viewport = page.getViewport({ scale: 0.4 });
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    return canvas.toDataURL();
+  } catch (e) {
+    return ""; // Fallback caso o PDF esteja corrompido
+  }
 }
 
 function refreshUI() {
@@ -277,7 +275,7 @@ function refreshUI() {
     card.innerHTML = `
       <button class="remove-btn" onclick="removePdf(${item.id})">✕</button>
       <img src="${item.thumb}" class="preview-img">
-      <span class="file-name">${item.file.name}</span>
+      <span class="file-name" title="${item.file.name}">${item.file.name}</span>
     `;
     grid.appendChild(card);
   });
@@ -291,7 +289,7 @@ function removePdf(id) {
 
 async function mergePdfs() {
   mergeBtn.disabled = true;
-  mergeBtn.innerText = "MESCLANDO...";
+  mergeBtn.innerText = "PROCESSANDO...";
 
   try {
     const finalPdf = await PDFLib.PDFDocument.create();
@@ -306,30 +304,40 @@ async function mergePdfs() {
     const pdfBytes = await finalPdf.save();
     const blob = new Blob([pdfBytes], { type: 'application/pdf' });
     const url = URL.createObjectURL(blob);
+    
+    // Download
     const a = document.createElement('a');
     a.href = url;
-    a.download = "Relatorio_Mesclado_ARSAL.pdf";
+    a.download = "PDF_Mesclado_Gefsan.pdf";
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     
-    mergeBtn.innerText = "CONCLUÍDO!";
+    // --- FUNÇÃO DE LIMPEZA APÓS O DOWNLOAD ---
     setTimeout(() => {
-      mergeBtn.innerText = "📄 Gerar Relatório Único";
-      mergeBtn.disabled = false;
-    }, 2000);
+        if(confirm("Download concluído! Deseja limpar a lista para uma nova mesclagem?")) {
+            pdfList = [];
+            refreshUI();
+        }
+        mergeBtn.innerText = "📄 Gerar Relatório Único";
+        mergeBtn.disabled = (pdfList.length < 2);
+    }, 1000);
+
   } catch (err) {
     console.error(err);
-    alert("Erro ao processar arquivos.");
+    alert("Erro ao mesclar. Verifique se os PDFs não possuem senha.");
     mergeBtn.disabled = false;
+    mergeBtn.innerText = "📄 Gerar Relatório Único";
   }
 }
 
-// Drag & Drop de arquivos (Upload)
+// Drag & Drop (Upload)
 const dz = document.getElementById('drop-zone');
-dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.borderColor = 'var(--arsal-blue)'; });
-dz.addEventListener('dragleave', () => dz.style.borderColor = 'var(--arsal-blue-light)');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.background = '#EDF2F7'; });
+dz.addEventListener('dragleave', () => dz.style.background = 'var(--surface2)');
 dz.addEventListener('drop', e => {
   e.preventDefault();
-  dz.style.borderColor = 'var(--arsal-blue-light)';
+  dz.style.background = 'var(--surface2)';
   handleFiles(e.dataTransfer.files);
 });
 </script>
